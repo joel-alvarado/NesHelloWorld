@@ -2,8 +2,8 @@
   ; .byte "NES", $1A      ; iNES header identifier
   .byte $4E, $45, $53, $1A
   .byte 2               ; 2x 16KB PRG code
-  .byte 1               ; 1x  8KB CHR data
-  .byte $01, $00        ; mapper 0, vertical mirroring
+  .byte 0               ; 1x  8KB CHR data
+  .byte $00, $00        ; mapper 0, vertical mirroring
 
 .segment "VECTORS"
   ;; When an NMI happens (once per frame if enabled) the label nmi:
@@ -22,6 +22,7 @@
 PPUCTRL   = $2000
 PPUMASK   = $2001
 PPUSTATUS = $2002
+PPUSCROLL = $2005
 PPUADDR   = $2006
 PPUDATA   = $2007
 
@@ -33,9 +34,50 @@ reset:
   ldx #$ff 	; Set up stack
   txs		;  .
   inx		; now X = 0
-  stx $2000	; disable NMI
-  stx $2001 	; disable rendering
+  
+  lda #$00
+  sta PPUCTRL   ; disable NMIs
+  sta PPUMASK   ; disable rendering
+
+  lda #$00
+  sta PPUSCROLL ; X scroll position
+  lda #$00
+  sta PPUSCROLL ; Y scroll position
+
   stx $4010 	; disable DMC IRQs
+
+@load_tiles:	
+  ; Init PPUADDR to pattern table start
+  lda #$00  ; High byte of $0000
+  sta PPUADDR ; Set high byte of address
+  lda #$00  ; Low byte of $0000
+  sta PPUADDR ; Set low byte of address
+  
+ldx #$00
+loop:
+  lda tiles, x 	; Load each tile
+  sta PPUDATA
+  inx
+  cpx #$a0
+  bne loop
+
+@init_bg:
+  ; Load tiles to nametable to write full name
+  ; Set PPUADDR to nametable start
+  lda PPUSTATUS
+  lda #$20
+  sta PPUADDR
+  lda #$00
+  sta PPUADDR
+  
+  ; Loop to load full_name tile indices
+  ldx #$00
+  write_name:
+  lda full_name, x
+  sta PPUDATA
+  inx
+  cpx #$0c
+  bne write_name
 
 ;; first wait for vblank to make sure PPU is ready
 vblankwait1:
@@ -76,10 +118,10 @@ load_palettes:
   bne @loop
 
 enable_rendering:
-  lda #%10000000	; Enable NMI
-  sta $2000
-  lda #%00010000	; Enable Sprites
-  sta $2001
+  lda #%10000000 ; Enable NMI and background rendering.
+  sta PPUCTRL
+  lda #%00011110 ; Enable background and sprite rendering in PPUMASK.
+  sta PPUMASK
 
 forever:
   jmp forever
@@ -87,37 +129,11 @@ forever:
 nmi:
   ldx #$00 	; Set SPR-RAM address to 0
   stx $2003
-@loop:	lda first_name, x 	; Load the hello message into SPR-RAM
-  sta $2004
-  inx
-  cpx #$30
-  bne @loop
   rti
-
-first_name:
-  ; .byte $00, $00, $00, $00 	; Why do I need these here?
-  ; .byte $00, $00, $00, $00
-
-  .byte $6c, $00, $00, $6c  ; y=0x6c(108), S=$00, P=$00, x=0x76(108) J
-  .byte $6c, $01, $00, $72  ; y=0x6c(108), S=$01, P=$00, x=0x74(116) o
-  .byte $6c, $02, $01, $78  ; y=0x6c(108), S=$02, P=$00, x=0x7c(124) e
-  .byte $6c, $03, $01, $7b  ; y=0x6c(108), S=$03, P=$00, x=0x84(132) l
-
-last_name:
-  .byte $78, $04, $02, $6c  ; y=0x6c(108), S=$04, P=$00, x=0x8c(140) A
-  .byte $78, $03, $02, $6f  ; y=0x6c(108), S=$03, P=$00, x=0x84(132) l
-  .byte $78, $05, $03, $74  ; y=0x6c(108), S=$03, P=$00, x=0x84(132) v
-  .byte $78, $06, $03, $7a  ; y=0x6c(108), S=$03, P=$00, x=0x84(132) a
-  .byte $78, $07, $01, $80  ; y=0x6c(108), S=$03, P=$00, x=0x84(132) r
-  .byte $78, $06, $02, $85  ; y=0x6c(108), S=$03, P=$00, x=0x84(132) a
-  .byte $78, $08, $00, $8b  ; y=0x6c(108), S=$03, P=$00, x=0x84(132) d
-  .byte $78, $01, $00, $91  ; y=0x6c(108), S=$01, P=$00, x=0x74(116) o
-
-
 
 palettes:
   ; Background Palette
-  .byte $0f, $00, $00, $00
+  .byte $0f, $02, $03, $04
   .byte $0f, $00, $00, $00
   .byte $0f, $00, $00, $00
   .byte $0f, $00, $00, $00
@@ -128,8 +144,11 @@ palettes:
   .byte $0f, $06, $00, $07
   .byte $0f, $08, $00, $09
 
-; Character memory
-.segment "CHARS"
+tiles:
+  ; empty tile
+  .byte $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff
+  .byte $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff
+
   ; J
   .byte %00000001
   .byte %00000001
@@ -252,3 +271,7 @@ palettes:
   .byte %00010001
   .byte %00001111
   .byte $00, $00, $00, $00, $00, $00, $00, $00
+
+full_name:
+  .byte $01, $02, $03, $04 ; Joel
+  .byte $05, $04, $06, $07, $08, $07, $09, $02
