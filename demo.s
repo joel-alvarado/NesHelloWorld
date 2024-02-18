@@ -19,6 +19,12 @@
 ; Main code segment for the program
 .segment "CODE"
 
+PPUCTRL   = $2000
+PPUMASK   = $2001
+PPUSTATUS = $2002
+PPUADDR   = $2006
+PPUDATA   = $2007
+
 reset:
   sei		; disable IRQs
   cld		; disable decimal mode
@@ -81,21 +87,33 @@ forever:
 nmi:
   ldx #$00 	; Set SPR-RAM address to 0
   stx $2003
-@loop:	lda hello, x 	; Load the hello message into SPR-RAM
+@loop:	lda first_name, x 	; Load the hello message into SPR-RAM
   sta $2004
   inx
-  cpx #$1c
+  cpx #$30
   bne @loop
   rti
 
-hello:
-  .byte $00, $00, $00, $00 	; Why do I need these here?
-  .byte $00, $00, $00, $00
-  .byte $6c, $00, $00, $6c
-  .byte $6c, $01, $00, $76
-  .byte $6c, $02, $00, $80
-  .byte $6c, $02, $00, $8A
-  .byte $6c, $03, $00, $94
+first_name:
+  ; .byte $00, $00, $00, $00 	; Why do I need these here?
+  ; .byte $00, $00, $00, $00
+
+  .byte $6c, $00, $00, $6c  ; y=0x6c(108), S=$00, P=$00, x=0x76(108) J
+  .byte $6c, $01, $00, $72  ; y=0x6c(108), S=$01, P=$00, x=0x74(116) o
+  .byte $6c, $02, $01, $78  ; y=0x6c(108), S=$02, P=$00, x=0x7c(124) e
+  .byte $6c, $03, $01, $7b  ; y=0x6c(108), S=$03, P=$00, x=0x84(132) l
+
+last_name:
+  .byte $78, $04, $02, $6c  ; y=0x6c(108), S=$04, P=$00, x=0x8c(140) A
+  .byte $78, $03, $02, $6f  ; y=0x6c(108), S=$03, P=$00, x=0x84(132) l
+  .byte $78, $05, $03, $74  ; y=0x6c(108), S=$03, P=$00, x=0x84(132) v
+  .byte $78, $06, $03, $7a  ; y=0x6c(108), S=$03, P=$00, x=0x84(132) a
+  .byte $78, $07, $01, $80  ; y=0x6c(108), S=$03, P=$00, x=0x84(132) r
+  .byte $78, $06, $02, $85  ; y=0x6c(108), S=$03, P=$00, x=0x84(132) a
+  .byte $78, $08, $00, $8b  ; y=0x6c(108), S=$03, P=$00, x=0x84(132) d
+  .byte $78, $01, $00, $91  ; y=0x6c(108), S=$01, P=$00, x=0x74(116) o
+
+
 
 palettes:
   ; Background Palette
@@ -105,49 +123,132 @@ palettes:
   .byte $0f, $00, $00, $00
 
   ; Sprite Palette
-  .byte $0f, $20, $00, $00
-  .byte $0f, $00, $00, $00
-  .byte $0f, $00, $00, $00
-  .byte $0f, $00, $00, $00
+  .byte $0f, $02, $00, $03
+  .byte $0f, $04, $00, $05
+  .byte $0f, $06, $00, $07
+  .byte $0f, $08, $00, $09
 
 ; Character memory
 .segment "CHARS"
-  .byte %11000011	; H (00)
-  .byte %11000011
-  .byte %11000011
-  .byte %11111111
-  .byte %11111111
-  .byte %11000011
-  .byte %11000011
-  .byte %11000011
+  ; J
+  .byte %00000001
+  .byte %00000001
+  .byte %00000001
+  .byte %00000001
+  .byte %00000001
+  .byte %00000001
+  .byte %00010001
+  .byte %00001110
   .byte $00, $00, $00, $00, $00, $00, $00, $00
 
-  .byte %11111111	; E (01)
-  .byte %11111111
-  .byte %11000000
-  .byte %11111100
-  .byte %11111100
-  .byte %11000000
-  .byte %11111111
-  .byte %11111111
+  ; o
+  .byte %00000000
+  .byte %00000000
+  .byte %00000000
+  .byte %00001110
+  .byte %00010001
+  .byte %00010001
+  .byte %00010001
+  .byte %00001110
+
+  .byte %00000000
+  .byte %00000000
+  .byte %00000000
+  .byte %00001110
+  .byte %00010001
+  .byte %00010001
+  .byte %00010001
+  .byte %00001110
+
+  ; e
+  .byte %00000000
+  .byte %00000000
+  .byte %00000000
+  .byte %00001110
+  .byte %00010001
+  .byte %00011111
+  .byte %00010000
+  .byte %00001111
   .byte $00, $00, $00, $00, $00, $00, $00, $00
 
-  .byte %11000000	; L (02)
-  .byte %11000000
-  .byte %11000000
-  .byte %11000000
-  .byte %11000000
-  .byte %11000000
-  .byte %11111111
-  .byte %11111111
+  ; l
+  .byte %00000010
+  .byte %00000010
+  .byte %00000010
+  .byte %00000010
+  .byte %00000010
+  .byte %00000010
+  .byte %00000010
+  .byte %00000001
+
+  .byte %00000010
+  .byte %00000010
+  .byte %00000010
+  .byte %00000010
+  .byte %00000010
+  .byte %00000010
+  .byte %00000010
+  .byte %00000001
+
+  ; A
+  .byte %00001110
+  .byte %00010001
+  .byte %00011111
+  .byte %00010001
+  .byte %00010001
+  .byte %00010001
+  .byte %00010001
+  .byte %00010001
   .byte $00, $00, $00, $00, $00, $00, $00, $00
 
-  .byte %01111110	; O (03)
-  .byte %11100111
-  .byte %11000011
-  .byte %11000011
-  .byte %11000011
-  .byte %11000011
-  .byte %11100111
-  .byte %01111110
+  ; v
+  .byte %00000000
+  .byte %00000000
+  .byte %00000000
+  .byte %00010001
+  .byte %00010001
+  .byte %00010001
+  .byte %00001010
+  .byte %00000100
+
+  .byte %00000000
+  .byte %00000000
+  .byte %00000000
+  .byte %00010001
+  .byte %00010001
+  .byte %00010001
+  .byte %00001010
+  .byte %00000100
+
+  ; a
+  .byte %00000000
+  .byte %00000000
+  .byte %00000000
+  .byte %00001110
+  .byte %00000001
+  .byte %00001111
+  .byte %00010001
+  .byte %00001111
+  .byte $00, $00, $00, $00, $00, $00, $00, $00
+
+  ; r
+  .byte %00000000
+  .byte %00000000
+  .byte %00000000
+  .byte %00010110
+  .byte %00011001
+  .byte %00010000
+  .byte %00010000
+  .byte %00010000
+  .byte $00, $00, $00, $00, $00, $00, $00, $00
+
+  ; d
+  .byte %00000001
+  .byte %00000001
+  .byte %00000001
+  .byte %00001101
+  .byte %00010011
+  .byte %00010001
+  .byte %00010001
+  .byte %00001111
   .byte $00, $00, $00, $00, $00, $00, $00, $00
