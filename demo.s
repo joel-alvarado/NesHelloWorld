@@ -37,6 +37,15 @@ reset:
   stx $2001 	; disable rendering
   stx $4010 	; disable DMC IRQs
 
+  ; Clear OAM data
+;   ldx #$00           ; Start with OAM address 0
+; clear_oam_loop:
+;   lda #$F0           ; Y position off the visible screen area
+;   sta $0200, x       ; Write to OAM through DMA address
+;   inx
+;   cpx #256          ; Check if we've reached the end of OAM
+;   bne clear_oam_loop ; Loop back and continue if not done
+
 ;; first wait for vblank to make sure PPU is ready
 vblankwait1:
   bit $2002
@@ -90,20 +99,18 @@ nmi:
 @loop:	lda first_name, x 	; Load the hello message into SPR-RAM
   sta $2004
   inx
-  cpx #$30
+  cpx #$38
   bne @loop
   rti
 
 first_name:
-  ; .byte $00, $00, $00, $00 	; Why do I need these here?
-  ; .byte $00, $00, $00, $00
+  .byte $00, $00, $00, $00 	; Why do I need these here?
+  .byte $00, $00, $00, $00
 
-  .byte $6c, $00, $00, $6c  ; y=0x6c(108), S=$00, P=$00, x=0x76(108) J
-  .byte $6c, $01, $00, $72  ; y=0x6c(108), S=$01, P=$00, x=0x74(116) o
+  .byte $6c, $00, $01, $6c  ; y=0x6c(108), S=$00, P=$00, x=0x76(108) J
+  .byte $6c, $01, $01, $72  ; y=0x6c(108), S=$01, P=$00, x=0x74(116) o
   .byte $6c, $02, $01, $78  ; y=0x6c(108), S=$02, P=$00, x=0x7c(124) e
   .byte $6c, $03, $01, $7b  ; y=0x6c(108), S=$03, P=$00, x=0x84(132) l
-
-last_name:
   .byte $78, $04, $02, $6c  ; y=0x6c(108), S=$04, P=$00, x=0x8c(140) A
   .byte $78, $03, $02, $6f  ; y=0x6c(108), S=$03, P=$00, x=0x84(132) l
   .byte $78, $05, $03, $74  ; y=0x6c(108), S=$03, P=$00, x=0x84(132) v
