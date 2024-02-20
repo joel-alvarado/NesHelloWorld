@@ -1,3 +1,5 @@
+; Joel André Alvarado Morales 802-20-8724
+
 .segment "HEADER"
   ; .byte "NES", $1A      ; iNES header identifier
   .byte $4E, $45, $53, $1A
