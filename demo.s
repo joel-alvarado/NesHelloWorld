@@ -39,11 +39,6 @@ reset:
   sta PPUCTRL   ; disable NMIs
   sta PPUMASK   ; disable rendering
 
-  lda #$00
-  sta PPUSCROLL ; X scroll position
-  lda #$00
-  sta PPUSCROLL ; Y scroll position
-
   stx $4010 	; disable DMC IRQs
 
   ; Clear OAM address to prevent weird ghost sprites 
@@ -89,7 +84,7 @@ loop:
   bne write_name
 
   ; Select attributes for nametable
-  ; $23c0
+; $23c0
   lda #$23
   sta PPUADDR
   lda #$da
