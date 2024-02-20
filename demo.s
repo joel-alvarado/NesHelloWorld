@@ -3,7 +3,7 @@
   .byte $4E, $45, $53, $1A
   .byte 2               ; 2x 16KB PRG code
   .byte 0               ; 1x  8KB CHR data
-  .byte $00, $00        ; mapper 0, vertical mirroring
+  .byte $01, $00        ; mapper 0, vertical mirroring
 
 .segment "VECTORS"
   ;; When an NMI happens (once per frame if enabled) the label nmi:
@@ -46,6 +46,15 @@ reset:
 
   stx $4010 	; disable DMC IRQs
 
+  ; Clear OAM address to prevent weird ghost sprites 
+  ldx #$00           ; Start with OAM address 0
+clear_oam_loop:
+  lda #$F0           ; Y position off the visible screen area
+  sta $0200, x       ; Write to OAM through DMA address
+  inx
+  cpx #255          ; Check if we've reached the end of OAM
+  bne clear_oam_loop ; Loop back and continue if not done
+
 @load_tiles:	
   ; Init PPUADDR to pattern table start
   lda #$00  ; High byte of $0000
@@ -78,6 +87,29 @@ loop:
   inx
   cpx #$0c
   bne write_name
+
+  ; Select attributes for nametable
+  ; $23c0
+  lda #$23
+  sta PPUADDR
+  lda #$c0
+  sta PPUADDR
+  ldx #%00000001
+  stx PPUDATA
+
+  lda #$23
+  sta PPUADDR
+  lda #$c1
+  sta PPUADDR
+  ldx #%00001110
+  stx PPUDATA
+
+  lda #$23
+  sta PPUADDR
+  lda #$c2
+  sta PPUADDR
+  ldx #%00001001
+  stx PPUDATA
 
 ;; first wait for vblank to make sure PPU is ready
 vblankwait1:
@@ -127,16 +159,19 @@ forever:
   jmp forever
 
 nmi:
-  ldx #$00 	; Set SPR-RAM address to 0
-  stx $2003
+  lda #$00
+  sta PPUSCROLL
+  lda #$00
+  sta PPUSCROLL
+
   rti
 
 palettes:
   ; Background Palette
   .byte $0f, $02, $03, $04
-  .byte $0f, $00, $00, $00
-  .byte $0f, $00, $00, $00
-  .byte $0f, $00, $00, $00
+  .byte $0f, $05, $06, $07
+  .byte $0f, $08, $09, $0a
+  .byte $0f, $0b, $0c, $11
 
   ; Sprite Palette
   .byte $0f, $02, $00, $03
@@ -146,8 +181,8 @@ palettes:
 
 tiles:
   ; empty tile
-  .byte $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff
-  .byte $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff
+  .byte $00, $00, $00, $00, $00, $00, $00, $00
+  .byte $00, $00, $00, $00, $00, $00, $00, $00
 
   ; J
   .byte %00000001
@@ -259,7 +294,15 @@ tiles:
   .byte %00010000
   .byte %00010000
   .byte %00010000
-  .byte $00, $00, $00, $00, $00, $00, $00, $00
+  
+  .byte %00000000
+  .byte %00000000
+  .byte %00000000
+  .byte %00010110
+  .byte %00011001
+  .byte %00010000
+  .byte %00010000
+  .byte %00010000
 
   ; d
   .byte %00000001
@@ -274,4 +317,8 @@ tiles:
 
 full_name:
   .byte $01, $02, $03, $04 ; Joel
-  .byte $05, $04, $06, $07, $08, $07, $09, $02
+  .byte $05, $04, $06, $07, $08, $07, $09, $02 ; Alvarado
+
+.segment "CHARS"
+  .byte $00, $00, $00, $00, $00, $00, $00, $00
+  .byte $00, $00, $00, $00, $00, $00, $00, $00
