@@ -74,9 +74,9 @@ loop:
   ; Load tiles to nametable to write full name
   ; Set PPUADDR to nametable start
   lda PPUSTATUS
-  lda #$20
+  lda #$21
   sta PPUADDR
-  lda #$00
+  lda #$88
   sta PPUADDR
   
   ; Loop to load full_name tile indices
@@ -92,21 +92,21 @@ loop:
   ; $23c0
   lda #$23
   sta PPUADDR
-  lda #$c0
+  lda #$da
   sta PPUADDR
   ldx #%00000001
   stx PPUDATA
 
   lda #$23
   sta PPUADDR
-  lda #$c1
+  lda #$db
   sta PPUADDR
   ldx #%00001110
   stx PPUDATA
 
   lda #$23
   sta PPUADDR
-  lda #$c2
+  lda #$cc
   sta PPUADDR
   ldx #%00001001
   stx PPUDATA
